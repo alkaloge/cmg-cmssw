@@ -36,6 +36,10 @@ ttHEventAna = cfg.Analyzer(
     )
 
 
+ttHReclusterJets = cfg.Analyzer(
+            'ttHReclusterJetsAnalyzer',
+            )
+
 ttHIsoTrackAna = cfg.Analyzer(
             'ttHIsoTrackAnalyzer',
             candidates='packedPFCandidates',
@@ -77,6 +81,7 @@ selectedComponents = [ SingleMu, DoubleElectron, TTHToWW_PUS14, DYJetsM50_PU20bx
 sequence = cfg.Sequence(susyCoreSequence+[
     ttHIsoTrackAna,
     ttHEventAna,
+    ttHReclusterJets,
     treeProducer,
     ])
 
