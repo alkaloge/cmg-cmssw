@@ -42,7 +42,6 @@ int ReclusterJets::Reconstruct(){
   fastjet::JetDefinition jet_def;
 
   // prepare jet def 
-  // rparam_ unused for the exclusive jets  set here to a default lenght
   if (ktpower_ == 1.0) {
     jet_def = JetDefinition(kt_algorithm, rparam_);
   }  else if (ktpower_ == 0.0) {
@@ -59,15 +58,12 @@ int ReclusterJets::Reconstruct(){
 
   // recluster jet
    std::vector<fastjet::PseudoJet> inclusiveJets = fastjet::sorted_by_pt( fjClusterSeq_->inclusive_jets());
-   std::vector<fastjet::PseudoJet> exclusiveJets = fastjet::sorted_by_pt( fjClusterSeq_->exclusive_jets(2) );
 
 
   for (unsigned int i = 0; i <inclusiveJets.size(); ++i){
     
     JetObject_Px.push_back(inclusiveJets.at(i).px());
-    //    cout << "i=" << i << " px=" << exclusiveJets.at(i).px() ;
     JetObject_Py.push_back(inclusiveJets.at(i).py());
-    //    cout << " py=" << exclusiveJets.at(i).py() << endl;
     JetObject_Pz.push_back(inclusiveJets.at(i).pz());
     JetObject_E.push_back(inclusiveJets.at(i).e());
 
@@ -78,7 +74,7 @@ int ReclusterJets::Reconstruct(){
   JetObjectAll.push_back(JetObject_Pz);
   JetObjectAll.push_back(JetObject_E);
 
-  if(JetObjectAll.size()<1) return -1;
+  //if(JetObjectAll.size()==0) return -1;
   return 1;
     
     
