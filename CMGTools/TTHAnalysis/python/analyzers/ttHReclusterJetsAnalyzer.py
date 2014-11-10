@@ -20,8 +20,6 @@ from CMGTools.RootTools.utils.DeltaR import *
 
 import ROOT
 
-from ROOT import Hemisphere
-from ROOT import HemisphereViaKt
 from ROOT import ReclusterJets
 
 import os
@@ -45,9 +43,9 @@ class ttHReclusterJetsAnalyzer( Analyzer ):
     def makeFatJets(self, event):
         import array
         import numpy
-        objects40jc = [ j for j in event.cleanJets if j.pt() > 40 and abs(j.eta())<2.5 ]
+        objects40jc = [ j for j in event.cleanJets if j.pt() > 40.0 and abs(j.eta())<2.4 ]
         
-        if len(objects40jc)>=2:
+        if len(objects40jc)>=1:
             
             pxvec  = ROOT.std.vector(float)()
             pyvec  = ROOT.std.vector(float)()
@@ -98,9 +96,5 @@ class ttHReclusterJetsAnalyzer( Analyzer ):
 
         event.FatJets = []
         self.makeFatJets(event)
-
-#        print 'variables computed: MT=',event.mtw,'MT2=',event.mt2,'MT2W=',event.mt2w
-#        print 'pseudoJet1 px=',event.pseudoJet1.px(),' py=',event.pseudoJet1.py(),' pz=',event.pseudoJet1.pz()
-#        print 'pseudoJet2 px=',event.pseudoJet2.px(),' py=',event.pseudoJet2.py(),' pz=',event.pseudoJet2.pz()   
 
         return True
