@@ -1,7 +1,13 @@
 #!/usr/bin/env python
 #from mcAnalysis import *
 from CMGTools.TTHAnalysis.plotter.mcAnalysis import *
+import itertools
 
+SAFE_COLOR_LIST=[
+ROOT.kBlack, ROOT.kRed, ROOT.kGreen+2, ROOT.kBlue, ROOT.kMagenta+1, ROOT.kOrange+7, ROOT.kCyan+1, ROOT.kGray+2, ROOT.kViolet+5, ROOT.kSpring+5, ROOT.kAzure+1, ROOT.kPink+7, ROOT.kOrange+3, ROOT.kBlue+3, ROOT.kMagenta+3, ROOT.kRed+2,
+]
+def _unTLatex(string):
+    return string.replace("#chi","x").replace("#mu","m")
 class PlotFile:
     def __init__(self,fileName,options):
         self._options = options
@@ -21,7 +27,7 @@ class PlotFile:
                         extra[key] = eval(val)
                     else: extra[setting] = True
             line = re.sub("#.*","",line) 
-            field = [f.strip().replace(";",":") for f in line.replace("\\:",";").split(':')]
+            field = [f.strip().replace(";",":") for f in line.replace("::",";;").replace("\\:",";").split(':')]
             if len(field) <= 2: continue
             if len(options.plotselect):
                 skipMe = True
@@ -76,7 +82,11 @@ def doSpam(text,x1,y1,x2,y2,align=12,fill=False,textSize=0.033,_noDelete={}):
     cmsprel.SetLineColor(0);
     cmsprel.SetTextAlign(align);
     cmsprel.SetTextFont(42);
-    cmsprel.AddText(text);
+    splittext = text.split("\\n")
+    if(len(splittext)>1):
+        for text in splittext: cmsprel.AddText(text)
+    else:
+        cmsprel.AddText(text);
     cmsprel.Draw("same");
     _noDelete[text] = cmsprel; ## so it doesn't get deleted by PyROOT
     return cmsprel
@@ -92,6 +102,14 @@ def doTinyCmsPrelim(textLeft="_default_",textRight="_default_",hasExpo=False,tex
         if "%(lumi)" in textRight: 
             textRight = textRight % { 'lumi':lumi }
         doSpam(textRight,.68+xoffs, .955, .99+xoffs, .995, align=32, textSize=textSize)
+
+def printExtraLabel(labeltext, legPosition):
+    nLines = len(labeltext.split("\\n"))
+
+    if legPosition  == "TR":
+        doSpam(labeltext, .30, .90-nLines*0.03, .48, .90, align=11, textSize=0.03)
+    elif legPosition == "TL":
+        doSpam(labeltext, .75, .90-nLines*0.03, .93, .90, align=11, textSize=0.03)
 
 def reMax(hist,hist2,islog,factorLin=1.3,factorLog=2.0):
     if  hist.ClassName() == 'THStack':
@@ -122,7 +140,7 @@ def doDataNorm(pspec,pmap):
     sig.Draw("HIST SAME")
     return sig
 
-def doStackSignalNorm(pspec,pmap,individuals,extrascale=1.0):
+def doStackSignalNorm(pspec,pmap,individuals,extrascale=1.0,norm=True):
     total = sum([v.Integral() for k,v in pmap.iteritems() if k != 'data' and not hasattr(v,'summary')])
     if options.noStackSig:
         total = sum([v.Integral() for k,v in pmap.iteritems() if not hasattr(v,'summary') and mca.isBackground(k) ])
@@ -133,7 +151,7 @@ def doStackSignalNorm(pspec,pmap,individuals,extrascale=1.0):
             sig.SetFillStyle(0)
             sig.SetLineColor(sig.GetFillColor())
             sig.SetLineWidth(4)
-            sig.Scale(total*extrascale/sig.Integral())
+            if norm: sig.Scale(total*extrascale/sig.Integral())
             sig.Draw("HIST SAME")
             sigs.append(sig)
         return sigs
@@ -146,7 +164,7 @@ def doStackSignalNorm(pspec,pmap,individuals,extrascale=1.0):
         sig.SetFillStyle(0)
         sig.SetLineColor(206)
         sig.SetLineWidth(4)
-        if sig.Integral() > 0:
+        if norm and sig.Integral() > 0:
             sig.Scale(total*extrascale/sig.Integral())
         sig.Draw("HIST SAME")
         return [sig]
@@ -413,12 +431,13 @@ def doLegend(pmap,mca,corner="TR",textSize=0.035,cutoff=1e-2,cutoffSignals=True,
         total = sum([x.Integral() for x in pmap.itervalues()])
         sigEntries = []; bgEntries = []
         for p in mca.listSignals(allProcs=True):
+            if mca.getProcessOption(p,'HideInLegend',False): continue
             if p in pmap and pmap[p].Integral() > (cutoff*total if cutoffSignals else 0): 
                 lbl = mca.getProcessOption(p,'Label',p)
                 sigEntries.append( (pmap[p],lbl,mcStyle) )
         backgrounds = mca.listBackgrounds(allProcs=True)
-        backgrounds.reverse()
         for p in backgrounds:
+            if mca.getProcessOption(p,'HideInLegend',False): continue
             if p in pmap and pmap[p].Integral() >= cutoff*total: 
                 lbl = mca.getProcessOption(p,'Label',p)
                 bgEntries.append( (pmap[p],lbl,mcStyle) )
@@ -474,7 +493,6 @@ class PlotMaker:
                     dir = self._dir.mkdir(subname,title)
             dir.cd()
             for pspec in plots.plots():
-                print "    plot: ",pspec.name
                 pmap = mca.getPlots(pspec,cut,makeSummary=True)
                 #
                 # blinding policy
@@ -519,12 +537,12 @@ class PlotMaker:
                     if v.InheritsFrom("TH1"): v.SetDirectory(dir) 
                     dir.WriteTObject(v)
                 #
-                for p in mca.listBackgrounds(allProcs=True) + mca.listSignals(allProcs=True):
+                for p in itertools.chain(reversed(mca.listBackgrounds(allProcs=True)), reversed(mca.listSignals(allProcs=True))):
                     if p in pmap: 
                         plot = pmap[p]
                         if plot.Integral() <= 0: continue
-                        if mca.isSignal(p) and options.noStackSig == True: continue 
                         if mca.isSignal(p): plot.Scale(options.signalPlotScale)
+                        if mca.isSignal(p) and options.noStackSig == True: continue 
                         if self._options.plotmode == "stack":
                             stack.Add(plot)
                             total.Add(plot)
@@ -549,6 +567,16 @@ class PlotMaker:
                             plot.SetMarkerSize(1.5)
                         else:
                             plot.SetMarkerStyle(0)
+                if pspec.getOption('normEachBin',"False")=="True":
+                    for b in xrange(1,stack.GetHists().First().GetNbinsX()+1):
+                        IntegralBin=0
+                        for obj in stack.GetHists():
+                            IntegralBin+=obj.GetBinContent(b);
+                        if IntegralBin>0:
+                            for obj in stack.GetHists():
+                                obj.SetBinContent(b,obj.GetBinContent(b)/IntegralBin);
+                                obj.SetBinError(b,obj.GetBinError(b)/IntegralBin);
+
                 stack.Draw("GOFF")
                 stack.GetYaxis().SetTitle(pspec.getOption('YTitle',"Events"))
                 stack.GetXaxis().SetTitle(pspec.getOption('XTitle',pspec.name))
@@ -585,8 +613,21 @@ class PlotMaker:
                     if p2: p2.SetLogx(True)
                     total.GetXaxis().SetNoExponent(True)
                     total.GetXaxis().SetMoreLogLabels(True)
-                if islog: total.SetMaximum(2*total.GetMaximum())
-                if not islog: total.SetMinimum(0)
+                if not options.extraLabel=="": #free some space on the canvas for extra label lines
+                    tmpMin = 0.01 #default log miminum
+                    if pspec.hasOption('YMin'):
+                        tmpMin = pspec.getOption('YMin',1.0)
+                    total.SetMinimum(tmpMin)
+                    tmpMax = total.GetBinContent(total.GetMaximumBin())
+                    relHistHeight = 1- (ROOT.gStyle.GetPadTopMargin() + ROOT.gStyle.GetPadBottomMargin() + 0.03*len(options.extraLabel.split("\\n")))
+                    if islog: maximum = tmpMin * pow(tmpMax/tmpMin,1./relHistHeight);
+                    else: maximum = (tmpMax-tmpMin)/relHistHeight + tmpMin
+                    total.SetMaximum(maximum)
+                elif islog: #plain log without extra labels
+                    total.SetMaximum(2*total.GetMaximum())
+                    total.SetMinimum(0.01) # default min value for logy
+                    if pspec.hasOption('YMin'): total.SetMinimum(pspec.getOption('YMin',1.0))
+                else: total.SetMinimum(0)
                 total.Draw("HIST")
                 if self._options.plotmode == "stack":
                     stack.Draw("SAME HIST")
@@ -622,12 +663,13 @@ class PlotMaker:
                 doLegend(pmap,mca,corner=pspec.getOption('Legend','TR'),
                                   cutoff=legendCutoff, mcStyle=("F" if self._options.plotmode == "stack" else "L"),
                                   cutoffSignals=not(options.showSigShape or options.showIndivSigShapes or options.showSFitShape), 
-                                  textSize=(0.045 if doRatio else 0.035),
+                                  textSize=(0.045 if doRatio else  options.legendTextSize),
                                   legWidth=options.legendWidth)
                 doTinyCmsPrelim(hasExpo = total.GetMaximum() > 9e4 and not c1.GetLogy(),textSize=(0.045 if doRatio else 0.033))
+                if not options.extraLabel=="": printExtraLabel(options.extraLabel,pspec.getOption('Legend','TR'))
                 signorm = None; datnorm = None; sfitnorm = None
-                if options.showSigShape or options.showIndivSigShapes: 
-                    signorms = doStackSignalNorm(pspec,pmap,options.showIndivSigShapes,extrascale=options.signalPlotScale)
+                if options.showSigShape or options.showIndivSigShapes or options.showIndivSigs: 
+                    signorms = doStackSignalNorm(pspec,pmap,options.showIndivSigShapes or options.showIndivSigs,extrascale=options.signalPlotScale, norm=not options.showIndivSigs)
                     for signorm in signorms:
                         signorm.SetDirectory(dir); dir.WriteTObject(signorm)
                         reMax(total,signorm,islog)
@@ -662,7 +704,7 @@ class PlotMaker:
                         if subname: fdir += "/"+subname;
                         if not os.path.exists(fdir): 
                             os.makedirs(fdir); 
-                            if os.path.exists("/afs/cern.ch"): os.system("cp /afs/cern.ch/user/g/gpetrucc/php/index.php "+fdir)
+                            if os.path.exists("/afs/cern.ch"): os.system("cp /afs/cern.ch/user/a/alobanov/public/php/index.php "+fdir)
                         if ext == "txt":
                             dump = open("%s/%s.%s" % (fdir, pspec.name, ext), "w")
                             maxlen = max([len(mca.getProcessOption(p,'Label',p)) for p in mca.listSignals(allProcs=True) + mca.listBackgrounds(allProcs=True)]+[7])
@@ -672,10 +714,11 @@ class PlotMaker:
                                 plot = pmap[p]
                                 if plot.Integral() <= 0: continue
                                 norm = plot.Integral()
+                                if p not in ["signal","background"] and mca.isSignal(p): norm /= options.signalPlotScale # un-scale what was scaled
                                 stat = sqrt(sum([plot.GetBinError(b)**2 for b in xrange(1,plot.GetNbinsX()+1)]))
                                 syst = norm * mca.getProcessOption(p,'NormSystematic',0.0) if p not in ["signal", "background"] else 0;
                                 if p == "signal": dump.write(("-"*(maxlen+45))+"\n");
-                                dump.write(fmt % (mca.getProcessOption(p,'Label',p) if p not in ["signal", "background"] else p.upper(), norm, stat))
+                                dump.write(fmt % (_unTLatex(mca.getProcessOption(p,'Label',p) if p not in ["signal", "background"] else p.upper()), norm, stat))
                                 if syst: dump.write(" +/- %9.2f (syst)"  % syst)
                                 dump.write("\n")
                             if 'data' in pmap: 
@@ -683,14 +726,17 @@ class PlotMaker:
                                 dump.write(("%%%ds %%7.0f\n" % (maxlen+1)) % ('DATA', pmap['data'].Integral()))
                             dump.close()
                         else:
-                            if "TH2" in total.ClassName():
+                            if "TH2" in total.ClassName() or "TProfile2D" in total.ClassName():
                                 for p in mca.listSignals(allProcs=True) + mca.listBackgrounds(allProcs=True) + ["signal", "background"]:
                                     if p not in pmap: continue
                                     plot = pmap[p]
+                                    c1.SetRightMargin(0.20)
+                                    plot.SetContour(100)
                                     plot.Draw("COLZ")
-                                    c1.Print("%s/%s_%s.%s" % (fdir, pspec.name, p, ext))
+                                    c1.Print("%s/%s_%s.%s" % (fdir, pspec.name if not options.out else options.out + "_" + pspec.name, p, ext))
                             else:
-                                c1.Print("%s/%s.%s" % (fdir, pspec.name, ext))
+                                c1.Print("%s/%s.%s" % (fdir, pspec.name if not options.out else options.out + "_" + pspec.name, ext))
+
                 c1.Close()
 def addPlotMakerOptions(parser):
     addMCAnalysisOptions(parser)
@@ -698,10 +744,12 @@ def addPlotMakerOptions(parser):
     #parser.add_option("--lspam", dest="lspam",   type="string", default="CMS Simulation", help="Spam text on the right hand side");
     parser.add_option("--lspam", dest="lspam",   type="string", default="CMS Preliminary", help="Spam text on the right hand side");
     parser.add_option("--rspam", dest="rspam",   type="string", default="#sqrt{s} = 13 TeV, L = %(lumi).1f fb^{-1}", help="Spam text on the right hand side");
+    parser.add_option("--extraLabel", dest="extraLabel", default = "", help="print extra text next to the legend (several lines in case string contains \\n )")
     parser.add_option("--print", dest="printPlots", type="string", default="png,pdf,txt", help="print out plots in this format or formats (e.g. 'png,pdf,txt')");
     parser.add_option("--pdir", "--print-dir", dest="printDir", type="string", default="plots", help="print out plots in this directory");
     parser.add_option("--showSigShape", dest="showSigShape", action="store_true", default=False, help="Superimpose a normalized signal shape")
     parser.add_option("--showIndivSigShapes", dest="showIndivSigShapes", action="store_true", default=False, help="Superimpose normalized shapes for each signal individually")
+    parser.add_option("--showIndivSigs", dest="showIndivSigs", action="store_true", default=False, help="Superimpose shapes for each signal individually (normalized to their expected event yield)")
     parser.add_option("--noStackSig", dest="noStackSig", action="store_true", default=False, help="Don't add the signal shape to the stack (useful with --showSigShape)")
     parser.add_option("--showDatShape", dest="showDatShape", action="store_true", default=False, help="Stack a normalized data shape")
     parser.add_option("--showSFitShape", dest="showSFitShape", action="store_true", default=False, help="Stack a shape of background + scaled signal normalized to total data")
@@ -718,6 +766,7 @@ def addPlotMakerOptions(parser):
     parser.add_option("--select-plot", "--sP", dest="plotselect", action="append", default=[], help="Select only these plots out of the full file")
     parser.add_option("--exclude-plot", "--xP", dest="plotexclude", action="append", default=[], help="Exclude these plots from the full file")
     parser.add_option("--legendWidth", dest="legendWidth", type="float", default=0.25, help="Width of the legend")
+    parser.add_option("--legendTextSize", dest="legendTextSize", type="float", default=0.035, help="Textsize used in the legend (if no ratio plot is done)")
     parser.add_option("--flagDifferences", dest="flagDifferences", action="store_true", default=False, help="Flag plots that are different (when using only two processes, and plotmode nostack")
 
 if __name__ == "__main__":
@@ -730,11 +779,15 @@ if __name__ == "__main__":
     cuts = CutsFile(args[1],options)
     plots = PlotFile(args[2],options)
     outname  = options.out if options.out else (args[2].replace(".txt","")+".root")
+    print outname
     if (not options.out) and options.printDir:
         outname = options.printDir + "/"+os.path.basename(args[2].replace(".txt","")+".root")
+    elif options.out and options.printDir:
+        outname = options.printDir + "/" + outname +".root"
+    print outname
     if os.path.dirname(outname) and not os.path.exists(os.path.dirname(outname)):
         os.system("mkdir -p "+os.path.dirname(outname))
-        if os.path.exists("/afs/cern.ch"): os.system("cp /afs/cern.ch/user/g/gpetrucc/php/index.php "+os.path.dirname(outname))
+        if os.path.exists("/afs/cern.ch"): os.system("cp /afs/cern.ch/user/a/alobanov/public/php/index.php "+os.path.dirname(outname))
     print "Will save plots to ",outname
     fcut = open(re.sub("\.root$","",outname)+"_cuts.txt","w")
     fcut.write("%s\n" % cuts); fcut.close()

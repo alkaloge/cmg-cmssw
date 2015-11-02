@@ -1,0 +1,7 @@
+# QCD
+QCD     : QCD_HT_250To500          : xsec ; Label ="QCD", FillColor=ROOT.kCyan-6, NormSystematic=0.5
+QCD     : QCD_HT_500To1000         : xsec ; Label ="QCD", FillColor=ROOT.kCyan-6, NormSystematic=0.5
+QCD     : QCD_HT_1000ToInf         : xsec ; Label ="QCD", FillColor=ROOT.kCyan-6, NormSystematic=0.5
+
+#Background
+#TT 	 : TTJets : 809.1 ; FillColor=ROOT.kBlue-2, Label="t\#bar{t}", NormSystematic=0.5

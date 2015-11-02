@@ -1,0 +1,10 @@
+# QCD
+QCDsel+     : QCD_HT_250To500          : xsec : Selected == 1; Label ="selected", FillColor=ROOT.kRed, NormSystematic=0.5
+QCDsel+     : QCD_HT_500To1000         : xsec : Selected == 1; Label ="selected", FillColor=ROOT.kRed, NormSystematic=0.5
+QCDsel+     : QCD_HT_1000ToInf         : xsec : Selected == 1; Label ="selected", FillColor=ROOT.kRed, NormSystematic=0.5
+
+#Background
+#TT 	 : TTJets : 809.1 ; FillColor=ROOT.kBlue-2, Label="t\#bar{t}", NormSystematic=0.5
+QCDanti     : QCD_HT_250To500          : xsec : Selected == -1; Label ="anti-selected", FillColor=ROOT.kBlue, NormSystematic=0.5
+QCDanti     : QCD_HT_500To1000         : xsec : Selected == -1; Label ="anti-selected", FillColor=ROOT.kBlue, NormSystematic=0.5
+QCDanti     : QCD_HT_1000ToInf         : xsec : Selected == -1; Label ="anti-selected", FillColor=ROOT.kBlue, NormSystematic=0.5

@@ -1,0 +1,54 @@
+# QCD
+##100-250HT-bin not considered
+#QCD+      : QCD_HT_250To500          : xsec ; Label ="QCD", FillColor=ROOT.kCyan-6, NormSystematic=0.5
+#QCD+      : QCD_HT_500To1000         : xsec ; Label ="QCD", FillColor=ROOT.kCyan-6, NormSystematic=0.5
+#QCD+      : QCD_HT_1000ToInf         : xsec ; Label ="QCD", FillColor=ROOT.kCyan-6, NormSystematic=0.5
+QCD+      : QCD_HT_250To500          : 670500   ; Label ="QCD", FillColor=ROOT.kCyan-6, NormSystematic=0.5
+QCD+      : QCD_HT_500To1000         : 26740    ; Label ="QCD", FillColor=ROOT.kCyan-6, NormSystematic=0.5
+QCD+      : QCD_HT_1000ToInf         : 769.7    ; Label ="QCD", FillColor=ROOT.kCyan-6, NormSystematic=0.5
+
+
+#Background
+TT 	 : TTJets : 809.1 ; FillColor=ROOT.kBlue-2, Label="t\#bar{t}", NormSystematic=0.5
+
+SingleT  :TToLeptons_tch      : 136.05*0.108*3	;FillColor = ROOT.kViolet+5, Label= "t/\#bar{t}", NormSystematic=0.5
+SingleT  :TToLeptons_sch      :   7.20*0.108*3	;FillColor = ROOT.kViolet+5, Label= "t/\#bar{t}", NormSystematic=0.5
+SingleT  :TBarToLeptons_tch   :	 80.97*0.108*3  ;FillColor = ROOT.kViolet+5, Label= "t/\#bar{t}", NormSystematic=0.5
+SingleT  :TBarToLeptons_sch   :   4.16*0.108*3	;FillColor = ROOT.kViolet+5, Label= "t/\#bar{t}", NormSystematic=0.5
+SingleT  :TBar_tWch           : 35.6            ;FillColor = ROOT.kViolet+5, Label= "t/\#bar{t}", NormSystematic=0.5
+SingleT  :T_tWch              : 35.6            ;FillColor = ROOT.kViolet+5, Label= "t/\#bar{t}", NormSystematic=0.5
+
+WJets    : WJetsToLNu_HT100to200 :  1817.0  * 1.23  ; Label="W+jets", FillColor=ROOT.kGreen-2, NormSystematic=0.5
+WJets    : WJetsToLNu_HT200to400 :   471.6  * 1.23  ; Label="W+jets", FillColor=ROOT.kGreen-2, NormSystematic=0.5
+WJets    : WJetsToLNu_HT400to600 :    55.61 * 1.23  ; Label="W+jets", FillColor=ROOT.kGreen-2, NormSystematic=0.5
+WJets    : WJetsToLNu_HT600toInf :    18.81 * 1.23  ; Label="W+jets", FillColor=ROOT.kGreen-2, NormSystematic=0.5
+
+# HT bins: cross sections for DYJets taken from McM LO times inclusive k-factor from FEWZ(2008 pb x3)/McM(4746)
+DY       : DYJetsToLL_M50_HT100to200 :  194.3   * 1.27; Label="DY+jets", FillColor=ROOT.kRed-6, NormSystematic=0.5
+DY       : DYJetsToLL_M50_HT200to400 :   52.24  * 1.27; Label="DY+jets", FillColor=ROOT.kRed-6, NormSystematic=0.5
+DY       : DYJetsToLL_M50_HT400to600 :    6.546 * 1.27; Label="DY+jets", FillColor=ROOT.kRed-6, NormSystematic=0.5
+DY       : DYJetsToLL_M50_HT600toInf :    2.179 * 1.27; Label="DY+jets", FillColor=ROOT.kRed-6, NormSystematic=0.5
+
+# cross sections are from 13 TeV MG5_aMC@NLO v2.2.1, NNPDF 2.3nlo, fixed scale = mtop + 0.5*mv
+TTV : TTZJets : 0.8565 ; FillColor=ROOT.kOrange-3, Label="ttV(W/Z/H)", NormSystematic=0.2
+TTV : TTWJets : 0.6647 ; FillColor=ROOT.kOrange-3, Label="ttV(W/Z/H)", NormSystematic=0.2
+#double-check x-section values, especially for TTH
+TTV     : TTH : 0.5085 ; FillColor=ROOT.kOrange-3, Label="ttV(W/Z/H)", NormSystematic=0.2
+
+# GJets
+#GJets	: GJets_HT100to200 : xsec ; Label="\gamma+jets", FillColor=ROOT.kYellow, NormSystematic=0.5
+#GJets	: GJets_HT200to400 : xsec ; Label="\gamma+jets", FillColor=ROOT.kYellow, NormSystematic=0.5
+#GJets	: GJets_HT400to600 : xsec ; Label="\gamma+jets", FillColor=ROOT.kYellow, NormSystematic=0.5
+#GJets	: GJets_HT600toInf : xsec ; Label="\gamma+jets", FillColor=ROOT.kYellow, NormSystematic=0.5
+
+# QCD_bcToE
+##QCD_bcToE+      : QCD_Pt20to30_bcToE           : xsec ; Label ="QCD bcToE", FillColor=ROOT.kBlack+1, NormSystematic=0.5
+#QCD_bcToE+      : QCD_Pt30to80_bcToE           : xsec ; Label ="QCD bcToE", FillColor=ROOT.kBlack+1, NormSystematic=0.5
+#QCD_bcToE+      : QCD_Pt80to170_bcToE          : xsec ; Label ="QCD bcToE", FillColor=ROOT.kBlack+1, NormSystematic=0.5
+#QCD_bcToE+      : QCD_Pt170toInf_bcToE         : xsec ; Label ="QCD bcToE", FillColor=ROOT.kBlack+1, NormSystematic=0.5
+
+# QCD_EM
+##QCD_EM+      : QCD_Pt10to20_EMEnriched           : xsec ; Label ="QCD EMEnriched", FillColor=ROOT.kCyan+6, NormSystematic=0.5
+##QCD_EM+      : QCD_Pt20to30_EMEnriched           : xsec ; Label ="QCD EMEnriched", FillColor=ROOT.kCyan+6, NormSystematic=0.5
+#QCD_EM+      : QCD_Pt30to80_EMEnriched           : xsec ; Label ="QCD EM", FillColor=ROOT.kCyan+6, NormSystematic=0.5
+#QCD_EM+      : QCD_Pt80to170_EMEnriched          : xsec ; Label ="QCD EM", FillColor=ROOT.kCyan+6, NormSystematic=0.5

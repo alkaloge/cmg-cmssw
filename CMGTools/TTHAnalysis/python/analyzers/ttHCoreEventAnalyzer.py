@@ -10,8 +10,16 @@ class ttHCoreEventAnalyzer( Analyzer ):
     def __init__(self, cfg_ana, cfg_comp, looperName ):
         super(ttHCoreEventAnalyzer,self).__init__(cfg_ana,cfg_comp,looperName)
         self.maxLeps = cfg_ana.maxLeps
-        #self.leptonMVATTH  = LeptonMVA("TTH", "%s/src/CMGTools/TTHAnalysis/data/leptonMVA/%%s_BDTG.weights.xml" % os.environ['CMSSW_BASE'], self.cfg_comp.isMC)
-        self.leptonMVASusy = LeptonMVA("Susy","%s/src/CMGTools/TTHAnalysis/data/leptonMVA/susy/%%s_BDTG.weights.xml" % os.environ['CMSSW_BASE'], self.cfg_comp.isMC)
+        self.mhtForBiasedDPhi = cfg_ana.mhtForBiasedDPhi
+        self.jetForBiasedDPhi = cfg_ana.jetForBiasedDPhi
+        self.leptonMVAKindTTH = getattr(self.cfg_ana, "leptonMVAKindTTH", "Susy")
+        self.leptonMVAKindSusy = getattr(self.cfg_ana, "leptonMVAKindSusy", "Susy")
+        self.leptonMVAPathTTH = getattr(self.cfg_ana, "leptonMVAPathTTH", "CMGTools/TTHAnalysis/data/leptonMVA/tth/%s_BDTG.weights.xml")
+        if self.leptonMVAPathTTH[0] != "/": self.leptonMVAPathTTH = "%s/src/%s" % ( os.environ['CMSSW_BASE'], self.leptonMVAPathTTH)
+        self.leptonMVATTH = LeptonMVA(self.leptonMVAKindTTH, self.leptonMVAPathTTH, self.cfg_comp.isMC)
+        self.leptonMVAPathSusy = getattr(self.cfg_ana, "leptonMVAPathSusy", "CMGTools/TTHAnalysis/data/leptonMVA/susy/%s_BDTG.weights.xml")
+        if self.leptonMVAPathSusy[0] != "/": self.leptonMVAPathSusy = "%s/src/%s" % ( os.environ['CMSSW_BASE'], self.leptonMVAPathSusy)
+        self.leptonMVASusy = LeptonMVA(self.leptonMVAKindSusy, self.leptonMVAPathSusy, self.cfg_comp.isMC)
 
     def declareHandles(self):
         super(ttHCoreEventAnalyzer, self).declareHandles()
@@ -121,15 +129,15 @@ class ttHCoreEventAnalyzer( Analyzer ):
     #Function to make the biased Dphi
     def makeBiasedDPhi(self, event):
 
-        if len(event.cleanJets) == 0:
+        jets = getattr(event,self.jetForBiasedDPhi)
+        if len(jets) == 0:
             event.biasedDPhi = 0
             return 
-	mhtPx = event.mhtJet50jvec.px()
-	mhtPy = event.mhtJet50jvec.py()
+        mht = getattr(event,self.mhtForBiasedDPhi)
 
 	biasedDPhi = 10;
-        for jet in event.cleanJets:
-	    newPhi = atan2(mhtPy+jet.py(),mhtPx+jet.px())
+        for jet in jets:
+	    newPhi = atan2(mht.py()+jet.py(), mht.px()+jet.px())
 	    biasedDPhiTemp = abs(deltaPhi(newPhi,jet.phi()))
 	    if biasedDPhiTemp < biasedDPhi:
 		biasedDPhi = biasedDPhiTemp
@@ -190,6 +198,22 @@ class ttHCoreEventAnalyzer( Analyzer ):
         event.mhtJet50j = event.mhtJet50jvec.pt()
         event.mhtPhiJet50j = event.mhtJet50jvec.phi()        
 
+        #Make 40 and 50 GeV HTs from cleanGenJets
+        if self.cfg_comp.isMC:
+            
+            genObjects40j = [j for j in event.cleanGenJets if j.pt()>40]
+            genObjects50j = [j for j in event.cleanGenJets if j.pt()>50]
+
+            event.htGenJet40j = sum([x.pt() for x in genObjects40j])
+            event.mhtGenJet40jvec = ROOT.reco.Particle.LorentzVector(-1.*(sum([x.px() for x in genObjects40j])) , -1.*(sum([x.py() for x in genObjects40j])), 0, 0 )               
+            event.mhtGenJet40j = event.mhtGenJet40jvec.pt()
+            event.mhtPhiGenJet40j = event.mhtGenJet40jvec.phi()        
+
+            event.htGenJet50j = sum([x.pt() for x in genObjects50j])
+            event.mhtGenJet50jvec = ROOT.reco.Particle.LorentzVector(-1.*(sum([x.px() for x in genObjects50j])) , -1.*(sum([x.py() for x in genObjects50j])), 0, 0 )               
+            event.mhtGenJet50j = event.mhtGenJet50jvec.pt()
+            event.mhtPhiGenJet50j = event.mhtGenJet50jvec.phi()        
+
         event.htJet40j10l = sum([x.pt() for x in objects40j10l])
         event.mhtJet40j10lvec = ROOT.reco.Particle.LorentzVector(-1.*(sum([x.px() for x in objects40j10l])) , -1.*(sum([x.py() for x in objects40j10l])), 0, 0 )               
         event.mhtJet40j10l = event.mhtJet40j10lvec.pt()
@@ -240,10 +264,10 @@ class ttHCoreEventAnalyzer( Analyzer ):
         
         ##Variables related to IP
         #Of one lepton w.r.t. the PV of the event
-        event.absIP3DA = absIP3D(event.selectedLeptons[0],event.goodVertices[0]) if nlep > 0 else (-1,-1)  
-        event.absIP3DB = absIP3D(event.selectedLeptons[1],event.goodVertices[0]) if nlep > 1 else (-1,-1)    
-        event.absIP3DC = absIP3D(event.selectedLeptons[2],event.goodVertices[0]) if nlep > 2 else (-1,-1)
-        event.absIP3DD = absIP3D(event.selectedLeptons[3],event.goodVertices[0]) if nlep > 3 else (-1,-1)
+        event.absIP3DA = absIP3D(event.selectedLeptons[0],event.goodVertices[0] if len(event.goodVertices)>0 else event.vertices[0]) if nlep > 0 else (-1,-1)  
+        event.absIP3DB = absIP3D(event.selectedLeptons[1],event.goodVertices[0] if len(event.goodVertices)>0 else event.vertices[0]) if nlep > 1 else (-1,-1)    
+        event.absIP3DC = absIP3D(event.selectedLeptons[2],event.goodVertices[0] if len(event.goodVertices)>0 else event.vertices[0]) if nlep > 2 else (-1,-1)
+        event.absIP3DD = absIP3D(event.selectedLeptons[3],event.goodVertices[0] if len(event.goodVertices)>0 else event.vertices[0]) if nlep > 3 else (-1,-1)
 
         #Of one lepton w.r.t. the PV of the PV of the other leptons only
         event.absIP3DApvBC = absIP3Dtrkpvtrks(event.selectedLeptons[0],event.selectedLeptons[1],event.selectedLeptons[2],event.selectedLeptons[0],3,0) if nlep > 2 else (-1,-1)
@@ -284,11 +308,11 @@ class ttHCoreEventAnalyzer( Analyzer ):
             if thisDeltaPhi < event.deltaPhiMin : event.deltaPhiMin = thisDeltaPhi
 
         for lep in event.selectedLeptons:
-            #lep.mvaValue     = self.leptonMVATTH(lep)
+            lep.mvaValueTTH     = self.leptonMVATTH(lep)
             lep.mvaValueSusy = self.leptonMVASusy(lep)
         for lep in event.inclusiveLeptons:
             if lep not in event.selectedLeptons:
-                #lep.mvaValue     = self.leptonMVATTH(lep)
+                lep.mvaValueTTH     = self.leptonMVATTH(lep)
                 lep.mvaValueSusy = self.leptonMVASusy(lep)
 
 

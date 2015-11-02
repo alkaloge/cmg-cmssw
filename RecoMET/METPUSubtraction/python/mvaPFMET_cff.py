@@ -68,15 +68,22 @@ pfMVAMEt = cms.EDProducer("PFMETProducerMVA",
     srcLeptons = cms.VInputTag(),#"isomuons","isoelectrons","isotaus") # NOTE: you need to set this to collections of electrons, muons and tau-jets
                                  #                                             passing the lepton reconstruction & identification criteria applied in your analysis
     minNumLeptons = cms.int32(0),                     
+    permuteLeptons = cms.bool(False),
     srcRho = cms.InputTag('fixedGridRhoFastjetAll'),
     globalThreshold = cms.double(-1.),#pfMet.globalThreshold,
     minCorrJetPt = cms.double(-1.),
     inputFileNames = cms.PSet(
-        U     = cms.FileInPath('RecoMET/METPUSubtraction/data/gbrmet_53_Sep2013_type1.root'),
-        DPhi  = cms.FileInPath('RecoMET/METPUSubtraction/data/gbrmetphi_53_June2013_type1.root'),
-        CovU1 = cms.FileInPath('RecoMET/METPUSubtraction/data/gbru1cov_53_Dec2012.root'),
-        CovU2 = cms.FileInPath('RecoMET/METPUSubtraction/data/gbru2cov_53_Dec2012.root')
+        U     = cms.FileInPath('RecoMET/METPUSubtraction/data/gbrmet_7_2_X_MINIAOD_BX50PU40_Jan2015.root'),
+        DPhi  = cms.FileInPath('RecoMET/METPUSubtraction/data/gbrphi_7_2_X_MINIAOD_BX50PU40_Jan2015.root'),
+        CovU1 = cms.FileInPath('RecoMET/METPUSubtraction/data/gbru1cov_7_2_X_MINIAOD_BX50PU40_Jan2015.root'),
+        CovU2 = cms.FileInPath('RecoMET/METPUSubtraction/data/gbru2cov_7_2_X_MINIAOD_BX50PU40_Jan2015.root')
           ),
+    inputRecords = cms.PSet(
+        U     = cms.string("RecoilCor"),
+        DPhi  = cms.string("PhiCor"), 
+        CovU1 = cms.string("CovU1"),
+        CovU2 = cms.string("CovU2")
+    ),
     loadMVAfromDB = cms.bool(False),                             
 
     corrector = cms.string("ak4PFL1Fastjet"),

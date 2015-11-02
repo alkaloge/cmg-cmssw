@@ -27,6 +27,13 @@ class MCAnalysis:
         self._isSignal    = {}
         self._rank        = {} ## keep ranks as in the input text file
         self._projection  = Projections(options.project, options) if options.project != None else None
+        self._premap = []
+        for premap in options.premap:
+            to,fro = premap.split("=")
+            if to[-1] == ":": to = to[:-1]
+            to = to.strip()
+            for k in fro.split(","):
+                self._premap.append((re.compile(k.strip()+"$"), to))
         for line in open(samples,'r'):
             if re.match("\s*#.*", line): continue
             line = re.sub(r"(?<!\\)#.*","",line)  ## regexp black magic: match a # only if not preceded by a \!
@@ -43,17 +50,22 @@ class MCAnalysis:
             if len(field) <= 1: continue
             if "SkipMe" in extra and extra["SkipMe"] == True and not options.allProcesses: continue
             signal = False
-            if field[0][-1] == "+": 
+            pname = field[0]
+            if pname[-1] == "+": 
                 signal = True
-                field[0] = field[0][:-1]
+                pname = pname[:-1]
+            ## if we remap process names, do it
+            for x,newname in self._premap:
+                if re.match(x,pname):
+                    pname = newname
             ## If we have a selection of process names, apply it
             skipMe = (len(options.processes) > 0)
             for p0 in options.processes:
                 for p in p0.split(","):
-                    if re.match(p+"$", field[0]): skipMe = False
+                    if re.match(p+"$", pname): skipMe = False
             for p0 in options.processesToExclude:
                 for p in p0.split(","):
-                    if re.match(p+"$", field[0]): skipMe = True
+                    if re.match(p+"$", pname): skipMe = True
             for p0 in options.filesToExclude:
                 for p in p0.split(","):
                     if re.match(p+"$", field[1]): skipMe = True
@@ -64,7 +76,7 @@ class MCAnalysis:
                 signal = False
                 for p0 in options.processesAsSignal:
                     for p in p0.split(","):
-                        if re.match(p+"$", field[0]): signal = True
+                        if re.match(p+"$", pname): signal = True
             ## endif
             treename = extra["TreeName"] if "TreeName" in extra else options.tree 
             rootfile = "%s/%s/%s/%s_tree.root" % (options.path, field[1].strip(), treename, treename)
@@ -76,19 +88,24 @@ class MCAnalysis:
                 # Heppy calls the tree just 'tree.root'
                 rootfile = "%s/%s/%s/tree.root" % (options.path, field[1].strip(), treename)
                 treename = "tree"
+            elif (not os.path.exists(rootfile)) and os.path.exists("%s/%s/%s/tree.root.url" % (options.path, field[1].strip(), treename)):
+                # Heppy calls the tree just 'tree.root'
+                rootfile = "%s/%s/%s/tree.root" % (options.path, field[1].strip(), treename)
+                rootfile = open(rootfile+".url","r").readline().strip()
+                treename = "tree"
             pckfile = options.path+"/%s/skimAnalyzerCount/SkimReport.pck" % field[1].strip()
-            tty = TreeToYield(rootfile, options, settings=extra, name=field[0], cname=field[1].strip(), treename=treename)
+            tty = TreeToYield(rootfile, options, settings=extra, name=pname, cname=field[1].strip(), treename=treename)
             if signal: 
                 self._signals.append(tty)
-                self._isSignal[field[0]] = True
-            elif field[0] == "data":
+                self._isSignal[pname] = True
+            elif pname == "data":
                 self._data.append(tty)
             else:
-                self._isSignal[field[0]] = False
+                self._isSignal[pname] = False
                 self._backgrounds.append(tty)
-            if field[0] in self._allData: self._allData[field[0]].append(tty)
-            else                        : self._allData[field[0]] =     [tty]
-            if "data" not in field[0]:
+            if pname in self._allData: self._allData[pname].append(tty)
+            else                        : self._allData[pname] =     [tty]
+            if "data" not in pname:
                 pckobj  = pickle.load(open(pckfile,'r'))
                 counters = dict(pckobj)
                 if ('Sum Weights' in counters) and options.weight:
@@ -121,12 +138,12 @@ class MCAnalysis:
                         tty.setFullYield(nevt)
                     except:
                         tty.setFullYield(0)
-            if field[0] not in self._rank: self._rank[field[0]] = len(self._rank)
+            if pname not in self._rank: self._rank[pname] = len(self._rank)
         #if len(self._signals) == 0: raise RuntimeError, "No signals!"
         #if len(self._backgrounds) == 0: raise RuntimeError, "No backgrounds!"
     def listProcesses(self):
         ret = self._allData.keys()[:]
-        ret.sort(key = lambda n : self._rank[n], reverse = True)
+        ret.sort(key = lambda n : self._rank[n])
         return ret
     def isBackground(self,process):
         return process != 'data' and not self._isSignal[process]
@@ -134,11 +151,11 @@ class MCAnalysis:
         return self._isSignal[process]
     def listSignals(self,allProcs=False):
         ret = [ p for p in self._allData.keys() if p != 'data' and self._isSignal[p] and (self.getProcessOption(p, 'SkipMe') != True or allProcs) ]
-        ret.sort(key = lambda n : self._rank[n], reverse = True)
+        ret.sort(key = lambda n : self._rank[n])
         return ret
     def listBackgrounds(self,allProcs=False):
         ret = [ p for p in self._allData.keys() if p != 'data' and not self._isSignal[p] and (self.getProcessOption(p, 'SkipMe') != True or allProcs) ]
-        ret.sort(key = lambda n : self._rank[n], reverse = True)
+        ret.sort(key = lambda n : self._rank[n])
         return ret
     def hasProcess(self,process):
         return process in self._allData
@@ -239,12 +256,12 @@ class MCAnalysis:
             if key != 'data':
                 if self._isSignal[key]: allSig.append((key,reports[key]))
                 else: allBg.append((key,reports[key]))
-        allSig.sort(key = lambda (n,v): self._rank[n], reverse = True)
-        allBg.sort( key = lambda (n,v): self._rank[n], reverse = True)
+        allSig.sort(key = lambda (n,v): self._rank[n])
+        allBg.sort( key = lambda (n,v): self._rank[n])
         table = allSig + allBg
         if makeSummary:
-            if len(allSig)>1:
-                table.append(('ALL SIG',mergeReports([v for n,v in allSig])))
+#            if len(allSig)>1:
+#                table.append(('ALL SIG',mergeReports([v for n,v in allSig])))
             if len(allBg)>1:
                 table.append(('ALL BKG',mergeReports([v for n,v in allBg])))
         if "data" in reports: table += [ ('DATA', reports['data']) ]
@@ -263,7 +280,12 @@ class MCAnalysis:
             nfmtX+=u" %7.4f"
             nfmtL+=u" %7.2f"
             fmtlen+=9
-        if self._options.fractions:
+        if self._options.txtfmt == "latex" and self._options.fractions:
+            nfmtS+=" & %7.1f \%%" 
+            nfmtX+=" & %7.1f \%%" 
+            nfmtL+=" & %7.1f \%%" 
+            fmtlen+=8
+        elif self._options.fractions:
             nfmtS+=" %7.1f%%"
             nfmtX+=" %7.1f%%"
             nfmtL+=" %7.1f%%"
@@ -294,6 +316,46 @@ class MCAnalysis:
                     if self._options.weight and nev < 1000: print ( nfmtS if nev > 0.2 else nfmtX) % toPrint,
                     else                                  : print nfmtL % toPrint,
                 print ""
+        if self._options.txtfmt == "latex":
+            multirowN = 1
+            if self._options.errors: multirowN +=1
+            if self._options.fractions: multirowN +=1
+            print "\\begin{tabular}{ l " + "r "*len(table)*multirowN + " }"
+            print "CUT".center(clen),
+            for htemp,r in table: 
+                print "& \multicolumn{{ {} }} {{c}} {{".format(multirowN),
+                h = htemp.replace("_","\\_")
+#                print h
+                if len("   "+h) <= fmtlen:
+                    print ("   "+h).center(fmtlen),
+                elif len(h) <= fmtlen:
+                    print h.center(fmtlen),
+                else:
+                    print h[:fmtlen],
+                print "}",
+            print "\\\\"
+            headings = " & yields "
+            if self._options.errors:    headings+="& errors"
+            if self._options.fractions:    headings+="& efficieny "
+            print headings * len(table) + "\\\\"
+            print "\hline"
+            for i,(cut,dummy) in enumerate(table[0][1]):
+                print cfmt % cut,
+                for name,report in table:
+                    print "&",
+                    (nev,err) = report[i][1]
+                    den = report[i-1][1][0] if i>0 else 0
+                    fraction = nev/float(den) if den > 0 else 1
+                    if self._options.nMinusOne: 
+                        fraction = report[-1][1][0]/nev if nev > 0 else 1
+                    toPrint = (nev,)
+                    if self._options.errors:    toPrint+=(err,)
+                    if self._options.fractions: toPrint+=(fraction*100,)
+                    if self._options.weight and nev < 1000: print ( nfmtS if nev > 0.2 else nfmtX) % toPrint,
+                    else                                  : print nfmtL % toPrint,
+                print "\\\\"
+            print "\end{tabular}"
+
     def _getYields(self,ttylist,cuts):
         return mergeReports([tty.getYields(cuts) for tty in ttylist])
     def __str__(self):
@@ -307,6 +369,10 @@ class MCAnalysis:
         for a in self._backgrounds:
             mystr += str(a) + '\n'
         return mystr[:-1]
+    def processEvents(self,eventLoop,cut):
+        for p in self.listProcesses():
+            for tty in self._allData[p]:
+                tty.processEvents(eventLoop,cut)
 
 def addMCAnalysisOptions(parser,addTreeToYieldOnesToo=True):
     if addTreeToYieldOnesToo: addTreeToYieldOptions(parser)
@@ -314,6 +380,7 @@ def addMCAnalysisOptions(parser,addTreeToYieldOnesToo=True):
     parser.add_option("-P", "--path",           dest="path",        type="string", default="./",      help="path to directory with input trees and pickle files (./)") 
     parser.add_option("--RP", "--remote-path",   dest="remotePath",  type="string", default=None,      help="path to remote directory with trees, but not other metadata (default: same as path)") 
     parser.add_option("-p", "--process", dest="processes", type="string", default=[], action="append", help="Processes to print (comma-separated list of regexp, can specify multiple ones)");
+    parser.add_option("--pg", "--pgroup", dest="premap", type="string", default=[], action="append", help="Group proceses into one. Syntax is '<newname> := (comma-separated list of regexp)', can specify multiple times. Note tahat it is applied _before_ -p, --sp and --xp");
     parser.add_option("--xf", "--exclude-files", dest="filesToExclude", type="string", default=[], action="append", help="Files to exclude (comma-separated list of regexp, can specify multiple ones)");
     parser.add_option("--xp", "--exclude-process", dest="processesToExclude", type="string", default=[], action="append", help="Processes to exclude (comma-separated list of regexp, can specify multiple ones)");
     parser.add_option("--sp", "--signal-process", dest="processesAsSignal", type="string", default=[], action="append", help="Processes to set as signal (overriding the '+' in the text file)");

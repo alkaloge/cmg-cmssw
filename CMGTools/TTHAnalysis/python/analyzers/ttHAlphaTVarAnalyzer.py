@@ -5,22 +5,21 @@ from math import *
 
 #from ROOT import TLorentzVector, TVectorD
 
-from CMGTools.RootTools.utils.DeltaR import deltaR, deltaPhi
-from CMGTools.RootTools.fwlite.Analyzer import Analyzer
-from CMGTools.RootTools.fwlite.Event import Event
-from CMGTools.RootTools.statistics.Counter import Counter, Counters
-from CMGTools.RootTools.fwlite.AutoHandle import AutoHandle
-# from CMGTools.RootTools.physicsobjects.Lepton import Lepton
-# from CMGTools.RootTools.physicsobjects.Photon import Photon
-# from CMGTools.RootTools.physicsobjects.Electron import Electron
-# from CMGTools.RootTools.physicsobjects.Muon import Muon
-# from CMGTools.RootTools.physicsobjects.Tau import Tau
-from CMGTools.RootTools.physicsobjects.Jet import Jet
+from PhysicsTools.HeppyCore.utils.deltar import deltaR, deltaPhi
+from PhysicsTools.Heppy.analyzers.core.Analyzer import Analyzer
+from PhysicsTools.HeppyCore.framework.event import Event
+from PhysicsTools.HeppyCore.statistics.counter import Counter, Counters
+from PhysicsTools.Heppy.analyzers.core.AutoHandle import AutoHandle
 
-#from CMGTools.RootTools.utils.DeltaR import * 
+# from PhysicsTools.Heppy.physicsobjects.PhysicsObjects import Lepton
+# from PhysicsTools.Heppy.physicsobjects.PhysicsObjects import Photon
+# from PhysicsTools.Heppy.physicsobjects.PhysicsObjects import Electron
+# from PhysicsTools.Heppy.physicsobjects.PhysicsObjects import Muon
+# from PhysicsTools.Heppy.physicsobjects.PhysicsObjects import Tau
+from PhysicsTools.Heppy.physicsobjects.PhysicsObjects import Jet
 
 import ROOT
-from ROOT import AlphaT
+from ROOT.heppy import AlphaT
 
 
 import os
@@ -34,39 +33,39 @@ class ttHAlphaTVarAnalyzer( Analyzer ):
        #genJets                                                                                                                                                                     
         self.handles['genJets'] = AutoHandle( 'slimmedGenJets','std::vector<reco::GenJet>')
 
-    def beginLoop(self):
-        super(ttHAlphaTVarAnalyzer,self).beginLoop()
+    def beginLoop(self,setup):
+        super(ttHAlphaTVarAnalyzer,self).beginLoop(setup)
         self.counters.addCounter('pairs')
         count = self.counters.counter('pairs')
         count.register('all events')
 
 
     # Calculate alphaT using jet ET
-    def makeAlphaT(self, event):
+    def makeAlphaT(self, jets):
 
-        if len(event.cleanJets) == 0:
-            event.alphaT = 0
-            return
+        if len(jets) == 0:
+            return 0.
         
         px  = ROOT.std.vector('double')()
         py  = ROOT.std.vector('double')()
         et  = ROOT.std.vector('double')()
-#Make alphaT from lead 10 jets
-	for jet in event.cleanJets[:10]:
+
+        #Make alphaT from lead 10 jets
+	for jet in jets[:10]:
             px.push_back(jet.px())
             py.push_back(jet.py())
             et.push_back(jet.et())
-            pass
 
         alphaTCalc   = AlphaT()
-        event.alphaT = alphaTCalc.getAlphaT( et, px, py )
+        return alphaTCalc.getAlphaT( et, px, py )
 
-        return
+    def process(self, event):
+        self.readCollections( event.input )
 
-    def process(self, iEvent, event):
-        self.readCollections( iEvent )
+        event.alphaT = self.makeAlphaT(event.cleanJets)
 
-        event.alphaT = -999
-        self.makeAlphaT(event)
+        #Do the same with gen jets for MC
+        if self.cfg_comp.isMC:
+            event.genAlphaT = self.makeAlphaT(event.cleanGenJets)
 
         return True

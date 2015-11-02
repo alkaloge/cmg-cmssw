@@ -1,0 +1,9 @@
+1tl: nTightLeps25==1&&LepGood_pt[tightLeps25idx[0]]>25
+0vl: nVetoLeps10==0
+geq6j: nCentralJet30>=6
+lsl80: LSLjetptGT80==1
+ht500: htJet30j>500
+st200: LepGood_pt[tightLeps25idx[0]] + met_pt > 200
+1nB: nBJetCMVAMedium30>=1
+dp1: fabs(DeltaPhiLepW)>1
+

@@ -65,7 +65,40 @@ echo "Changing to job dir" $JobDir
 cd $JobDir
 
 echo 'Running in dir' `pwd`
+
+if [ -f processing ]; then
+    echo "Already processing that chunk now"
+    exit 0
+fi
+
+if [ -f processed ]; then
+    echo "Already processed that chunk"
+    exit 0
+fi
+
+touch processing
 python $CMSSW_BASE/src/PhysicsTools/HeppyCore/python/framework/looper.py pycfg.py config.pck
+# >& looper.log
+mv Loop/* ./
+rm -r Loop
+rm processing
+
+# check output quality
+
+if [ -f log.txt ]; then
+   log=$(grep "number of events processed" log.txt)
+
+   if $log ; then
+      echo "Successfully" $log
+      touch processed
+   else
+      echo "Job failed!"
+      touch failed
+   fi
+else
+   touch failed
+fi
+
 echo
 echo job end at `date`
 """

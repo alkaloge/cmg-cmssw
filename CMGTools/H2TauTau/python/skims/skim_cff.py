@@ -1,7 +1,7 @@
-from CMGTools.Common.skims.cmgTauMuCount_cfi import *
-from CMGTools.Common.skims.cmgTauEleCount_cfi import *
-from CMGTools.Common.skims.cmgMuEleCount_cfi import *
-from CMGTools.Common.skims.cmgDiTauCount_cfi import *
+from CMGTools.H2TauTau.skims.cmgTauMuCount_cfi import *
+from CMGTools.H2TauTau.skims.cmgTauEleCount_cfi import *
+from CMGTools.H2TauTau.skims.cmgMuEleCount_cfi import *
+from CMGTools.H2TauTau.skims.cmgDiTauCount_cfi import *
 
 
 # tau-mu
@@ -75,3 +75,17 @@ diTauFullSelSkimSequence = cms.Sequence(
     diTauFullSelCount
     )
 
+# mu-mu
+diMuPreSelCount = cmgDiTauCount.clone( minNumber = 1,
+                                        src = 'cmgDiMuSVFit')
+
+diMuFullSelCount = diMuPreSelCount.clone( src = 'cmgDiMuCorSVFitFullSel')
+
+
+diMuPreSelSkimSequence = cms.Sequence(
+    diMuPreSelCount 
+    )
+
+diMuFullSelSkimSequence = cms.Sequence(
+    diMuFullSelCount
+    )

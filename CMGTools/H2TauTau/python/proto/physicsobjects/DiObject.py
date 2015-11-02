@@ -1,12 +1,13 @@
 import math
 
 from PhysicsTools.Heppy.physicsobjects.PhysicsObjects import Muon, Tau
-from PhysicsTools.Heppy.physicsobjects.HTauTauElectron import HTauTauElectron
+# from PhysicsTools.Heppy.physicsobjects.HTauTauElectron import HTauTauElectron
+from PhysicsTools.Heppy.physicsobjects.Electron import Electron
 from PhysicsTools.HeppyCore.utils.deltar import deltaR2
 from ROOT import TVector3
 
 class DiObject( object ):
-    
+
     def __init__(self, diobject):
         self.diobject = diobject
         #p4 = LorentzVector( 1,0,0,1)
@@ -43,7 +44,7 @@ class DiObject( object ):
 class DiTau( DiObject ):
     def __init__(self, diobject):
         super(DiTau, self).__init__(diobject)
-    
+
     def met(self):
         return self.daughter(2)
 
@@ -58,6 +59,12 @@ class DiTau( DiObject ):
 
     def svfitPtError(self):
         return self.userFloat('ptUncert')
+
+    def svfitEta(self):
+        return self.userFloat('fittedEta')
+
+    def svfitPhi(self):
+        return self.userFloat('fittedPhi')
 
     def pZeta(self):
         if not hasattr(self, 'pZetaVis_'):
@@ -129,11 +136,11 @@ class DiTau( DiObject ):
         # print 'Gen taus: '
         # print '\n'.join( map( str, genTaus ) )
         if len(genTaus)!=2:
-            #COLIN what about WW, ZZ? 
+            #COLIN what about WW, ZZ?
             return (-1, -1)
         else:
             dR2leg1Min, self.leg1Gen = ( float('inf'), None)
-            dR2leg2Min, self.leg2Gen = ( float('inf'), None) 
+            dR2leg2Min, self.leg2Gen = ( float('inf'), None)
             for genTau in genTaus:
                 dR2leg1 = deltaR2(self.leg1().eta(), self.leg1().phi(),
                                   genTau.eta(), genTau.phi() )
@@ -148,7 +155,7 @@ class DiTau( DiObject ):
             # print self.leg2Gen
             self.leg1DeltaR = math.sqrt( dR2leg1Min )
             self.leg2DeltaR = math.sqrt( dR2leg2Min )
-            return (self.leg1DeltaR, self.leg2DeltaR) 
+            return (self.leg1DeltaR, self.leg2DeltaR)
 
 class DiMuon( DiTau ):
     def __init__(self, diobject):
@@ -174,12 +181,13 @@ class TauMuon( DiTau ):
 
     def leg2(self):
         return self.mu
-     
+
 class TauElectron( DiTau ):
     def __init__(self, diobject):
         super(TauElectron, self).__init__(diobject)
         self.tau = Tau( super(TauElectron, self).leg1() )
-        self.ele = HTauTauElectron( super(TauElectron, self).leg1() )
+        self.ele = Electron( super(TauElectron, self).leg2() )
+#         self.ele = HTauTauElectron( super(TauElectron, self).leg2() )
 
     def leg1(self):
         return self.tau
@@ -191,10 +199,24 @@ class MuonElectron( DiTau ):
     def __init__(self, diobject):
         super(MuonElectron, self).__init__(diobject)
         self.mu = Muon( super(MuonElectron, self).leg1() )
-        self.ele = HTauTauElectron( super(MuonElectron, self).leg2() )
+        self.ele = Electron( super(MuonElectron, self).leg2() )
+#         self.ele = HTauTauElectron( super(MuonElectron, self).leg2() )
 
     def leg1(self):
         return self.mu
 
     def leg2(self):
         return self.ele
+
+class TauTau( DiTau ):
+    def __init__(self, diobject):
+        super(TauTau, self).__init__(diobject)
+        self.tau  = Tau( super(TauTau, self).leg1() )
+        self.tau2 = Tau( super(TauTau, self).leg2() )
+
+    def leg1(self):
+        return self.tau
+
+    def leg2(self):
+        return self.tau2
+
